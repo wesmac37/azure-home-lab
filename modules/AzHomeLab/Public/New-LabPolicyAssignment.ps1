@@ -48,8 +48,22 @@ function New-LabPolicyAssignment {
     )
 
     try {
-        $rg = Get-AzResourceGroup -Name $ScopeResourceGroupName -ErrorAction Stop
-        $scope = $rg.ResourceId
+        # Build the resource-group scope deterministically from the current subscription ID and
+        # the resource group name, rather than depending on Get-AzResourceGroup returning a live
+        # object. Under -WhatIf, a resource group created earlier in the same run (e.g. during the
+        # Foundation phase) genuinely does not exist yet, so Get-AzResourceGroup would return $null
+        # here - relying on '$rg.ResourceId' would then fail even though the scope path itself is
+        # fully predictable from subscription ID + resource group name.
+        $context = Get-AzContext -ErrorAction Stop
+        if (-not $context -or -not $context.Subscription -or -not $context.Subscription.Id) {
+            throw 'No active Az context/subscription was found while building the policy assignment scope.'
+        }
+        $scope = "/subscriptions/$($context.Subscription.Id)/resourceGroups/$ScopeResourceGroupName"
+
+        $rg = Get-AzResourceGroup -Name $ScopeResourceGroupName -ErrorAction SilentlyContinue
+        if (-not $rg) {
+            Write-Verbose "New-LabPolicyAssignment: resource group '$ScopeResourceGroupName' was not found (it may be created earlier in this same run under -WhatIf). Proceeding with the computed scope '$scope'."
+        }
 
         $existing = Get-AzPolicyAssignment -Name $Name -Scope $scope -ErrorAction SilentlyContinue
         if ($existing) {
