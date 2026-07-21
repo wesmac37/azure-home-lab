@@ -1,0 +1,25 @@
+# Deployment logs
+logs/
+*.log
+
+# Terraform (optional future extension via the 'state' storage container)
+.terraform/
+*.tfstate*
+
+# Test output
+TestResults/
+
+# Publish profiles
+*.pubxml
+
+# Editor
+.vscode/
+
+# Config backups
+*.psd1.bak
+
+# Azure CLI/PowerShell auth artifacts
+azureauth.json
+
+# Environment files
+.env

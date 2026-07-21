@@ -1,0 +1,69 @@
+name: PowerShell CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    name: PSScriptAnalyzer + Pester
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify PowerShell version
+        shell: pwsh
+        run: $PSVersionTable.PSVersion
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser -Repository PSGallery
+          Import-Module -Name PSScriptAnalyzer -Force
+
+      - name: Install Pester
+        shell: pwsh
+        run: |
+          Install-Module -Name Pester -MinimumVersion 5.0.0 -Force -Scope CurrentUser -SkipPublisherCheck -Repository PSGallery
+          Import-Module -Name Pester -Force
+
+      - name: Run PSScriptAnalyzer (fail build on Error severity)
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Warning,Error -ExcludeRule PSAvoidUsingWriteHost
+          $results | Format-Table -AutoSize
+
+          $errorResults = $results | Where-Object { $_.Severity -eq 'Error' }
+          if ($errorResults) {
+            Write-Host "PSScriptAnalyzer found $($errorResults.Count) Error-severity issue(s)." -ForegroundColor Red
+            exit 1
+          }
+          else {
+            Write-Host 'PSScriptAnalyzer found no Error-severity issues.' -ForegroundColor Green
+          }
+
+      - name: Run Pester tests
+        shell: pwsh
+        run: |
+          $config = New-PesterConfiguration
+          $config.Run.Path = './tests'
+          $config.Run.Exit = $true
+          $config.TestResult.Enabled = $true
+          $config.TestResult.OutputFormat = 'NUnitXml'
+          $config.TestResult.OutputPath = './TestResults/test-results.xml'
+          $config.Output.Verbosity = 'Detailed'
+          $config.Run.PassThru = $false
+          New-Item -ItemType Directory -Path './TestResults' -Force | Out-Null
+          Invoke-Pester -Configuration $config -CI
+
+      - name: Upload test results artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pester-test-results
+          path: ./TestResults/test-results.xml
+          retention-days: 30
