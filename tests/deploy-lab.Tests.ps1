@@ -49,6 +49,14 @@ Describe 'deploy-lab.ps1 -WhatIf execution' {
             [PSCustomObject]@{ ResourceGroupName = 'rg-homelab-mgmt-eastus'; Location = 'eastus' }
         } -ModuleName 'AzHomeLab'
         Mock -CommandName Set-AzResourceGroup -MockWith { } -ModuleName 'AzHomeLab'
+
+        # deploy-lab.ps1 itself calls 'Import-Module -Name $modulePath -Force' to guarantee the
+        # freshest module code is loaded when run for real. Under test, that self-reimport would
+        # discard the AzHomeLab module instance (and all the -ModuleName mocks above) that this
+        # BeforeAll just set up, causing later calls to fall through to the real Az cmdlets. Since
+        # the module is already loaded (and already mocked) by this test file's own top-level
+        # BeforeAll, make the script's internal re-import a no-op here.
+        Mock -CommandName Import-Module -MockWith { }
     }
 
     It 'runs the Foundation phase under -WhatIf without throwing' {
