@@ -42,13 +42,13 @@ Describe 'deploy-lab.ps1 -WhatIf execution' {
         }
         Mock -CommandName Get-AzResourceProvider -MockWith {
             [PSCustomObject]@{ ProviderNamespace = 'Microsoft.Network'; RegistrationState = 'Registered' }
-        }
-        Mock -CommandName Register-AzResourceProvider -MockWith { }
-        Mock -CommandName Get-AzResourceGroup -MockWith { $null }
+        } -ModuleName 'AzHomeLab'
+        Mock -CommandName Register-AzResourceProvider -MockWith { } -ModuleName 'AzHomeLab'
+        Mock -CommandName Get-AzResourceGroup -MockWith { $null } -ModuleName 'AzHomeLab'
         Mock -CommandName New-AzResourceGroup -MockWith {
             [PSCustomObject]@{ ResourceGroupName = 'rg-homelab-mgmt-eastus'; Location = 'eastus' }
-        }
-        Mock -CommandName Set-AzResourceGroup -MockWith { }
+        } -ModuleName 'AzHomeLab'
+        Mock -CommandName Set-AzResourceGroup -MockWith { } -ModuleName 'AzHomeLab'
     }
 
     It 'runs the Foundation phase under -WhatIf without throwing' {
