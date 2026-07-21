@@ -58,7 +58,7 @@ jobs:
           $config.Output.Verbosity = 'Detailed'
           $config.Run.PassThru = $false
           New-Item -ItemType Directory -Path './TestResults' -Force | Out-Null
-          Invoke-Pester -Configuration $config -CI
+          Invoke-Pester -Configuration $config
 
       - name: Upload test results artifact
         if: always()
